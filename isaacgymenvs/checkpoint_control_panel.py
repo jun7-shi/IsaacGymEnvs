@@ -190,14 +190,7 @@ class CheckpointControlPanel:
         self.update_current_display()
 
         filename = os.path.basename(self.current_checkpoint)
-        self.status_var.set(f"Selected: {filename} - Restart play mode to apply")
-
-        # Show info message
-        messagebox.showinfo("Checkpoint Selected",
-                           f"Selected: {filename}\n\n"
-                           "To apply this checkpoint:\n"
-                           "1. Press ESC in the visualization window\n"
-                           "2. Re-run the play mode command")
+        self.status_var.set(f"Loaded: {filename} - Will apply automatically")
 
     def save_state(self):
         """Save current state to file"""

@@ -539,14 +539,75 @@ def launch_rlg_hydra(cfg: DictConfig):
             print(f"  Modified: {mod_time}")
             print(f"  Starting visualization...\n")
 
+        # Start background thread to monitor control panel state and update player checkpoint
+        player_ref = {'player': None}  # Will be set by runner
+
+        def monitor_checkpoint_changes():
+            """Background thread to monitor control panel state changes"""
+            import time
+            last_state_update = None
+
+            while True:
+                try:
+                    if os.path.exists(state_file):
+                        with open(state_file, 'r') as f:
+                            state = json.load(f)
+
+                        state_update_time = state.get('last_update', None)
+
+                        # Check if state has been updated
+                        if state_update_time != last_state_update:
+                            new_checkpoint = state.get('checkpoint_path', None)
+
+                            # Get player instance from runner
+                            player = player_ref.get('player')
+                            if player is not None and new_checkpoint and os.path.exists(new_checkpoint):
+                                # Set checkpoint_to_load, player will load it automatically
+                                with player.checkpoint_mutex:
+                                    player.checkpoint_to_load = new_checkpoint
+                                    print(f"\n{'#'*70}")
+                                    print(f"{'CHECKPOINT CHANGE REQUESTED':^70}")
+                                    print(f"{'#'*70}")
+                                    print(f"  New checkpoint: {os.path.basename(new_checkpoint)}")
+                                    print(f"  Will load in next evaluation cycle...")
+                                    print(f"{'#'*70}\n")
+
+                                last_state_update = state_update_time
+
+                    time.sleep(2)  # Check every 2 seconds
+
+                except Exception as e:
+                    print(f"Warning: Error in checkpoint monitor: {e}")
+                    time.sleep(5)
+
+        # Start monitor thread
+        import threading
+        monitor_thread = threading.Thread(target=monitor_checkpoint_changes, daemon=True)
+        monitor_thread.start()
+
         try:
-            # Run inference (this will run until user presses ESC)
-            runner.run({
-                'train': False,
-                'play': True,
-                'checkpoint': cfg.checkpoint,
-                'sigma': cfg.sigma if cfg.sigma != '' else None
-            })
+            # Run inference with evaluation mode enabled for checkpoint reloading
+            player = runner.create_player()
+            player_ref['player'] = player  # Store reference for monitor thread
+
+            # Enable evaluation mode and set update frequency
+            player.evaluation = True
+            player.update_checkpoint_freq = 1000  # Check every 1000 steps
+
+            # Initialize checkpoint_mutex and checkpoint_to_load if not already present
+            if not hasattr(player, 'checkpoint_mutex'):
+                import threading
+                player.checkpoint_mutex = threading.Lock()
+            if not hasattr(player, 'checkpoint_to_load'):
+                player.checkpoint_to_load = None
+
+            print(f"✓ Dynamic checkpoint reloading enabled")
+            print(f"  Checkpoint will be checked every {player.update_checkpoint_freq} steps")
+            print(f"  Use control panel to switch checkpoints on-the-fly\n")
+
+            # Run player
+            player.run()
+
         except KeyboardInterrupt:
             pass
         finally:

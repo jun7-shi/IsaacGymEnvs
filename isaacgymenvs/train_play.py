@@ -284,8 +284,8 @@ def launch_rlg_hydra(cfg: DictConfig):
         checkpoint_dir = os.path.join(experiment_dir, 'nn')
         checkpoint_filename = 'latest'  # algo.save() will add .pth automatically
 
-        # Set full_experiment_name for rl_games to use our experiment directory
-        cfg.full_experiment_name = experiment_dir
+        # Set full_experiment_name for rl_games (just the name, rl_games adds 'runs/' prefix)
+        cfg.full_experiment_name = experiment_dir_name
 
         print(f"\nTraining will save to: {experiment_dir}")
         print(f"Checkpoint will be saved to: {checkpoint_dir}/latest.pth\n")

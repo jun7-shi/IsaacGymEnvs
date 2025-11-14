@@ -50,6 +50,8 @@ checkpoint_save_freq: 100
 checkpoint_reload_interval: 30
 # whether to launch checkpoint control panel in play mode
 enable_control_panel: False
+# experiment directory name (will be set automatically by train_play.py)
+full_experiment_name: ''
 
 wandb_activate: False
 wandb_group: ''

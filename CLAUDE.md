@@ -97,9 +97,10 @@ python isaacgymenvs/checkpoint_control_panel.py --experiment=Ant
 
 **Configuration options:**
 - `checkpoint_save_freq=100`: Save checkpoint every N **epochs** (training iterations, not seconds) - train mode
-- `checkpoint_reload_interval=30`: Check for updates every N **seconds** - play mode
+- `checkpoint_update_freq=1000`: Check for checkpoint changes every N **steps** - play mode (smaller = more responsive)
 - `num_envs=4`: Number of visualization environments (play mode)
 - `experiment=<name>`: Experiment directory name (required for play mode, optional for train mode)
+- `enable_control_panel=True/False`: Auto-launch control panel GUI (default: False)
 
 **Note:** An epoch is one training iteration cycle in rl_games, not a time period.
 

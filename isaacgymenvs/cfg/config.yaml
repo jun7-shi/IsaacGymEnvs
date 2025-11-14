@@ -46,8 +46,11 @@ multi_gpu: False
 mode: 'train'
 # how often to save checkpoint in train mode (in epochs/iterations)
 checkpoint_save_freq: 100
-# how often to reload checkpoint in play mode (in seconds)
+# how often to reload checkpoint in play mode (in seconds) - deprecated, use checkpoint_update_freq
 checkpoint_reload_interval: 30
+# how often to check for checkpoint changes in play mode (in steps)
+# smaller = more responsive, larger = less overhead
+checkpoint_update_freq: 1000
 # whether to launch checkpoint control panel in play mode
 enable_control_panel: False
 # experiment directory name (will be set automatically by train_play.py)

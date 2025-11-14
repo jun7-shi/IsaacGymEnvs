@@ -592,7 +592,8 @@ def launch_rlg_hydra(cfg: DictConfig):
 
             # Enable evaluation mode and set update frequency
             player.evaluation = True
-            player.update_checkpoint_freq = 1000  # Check every 1000 steps
+            checkpoint_update_freq = cfg.get('checkpoint_update_freq', 1000)
+            player.update_checkpoint_freq = checkpoint_update_freq
 
             # Initialize checkpoint_mutex and checkpoint_to_load if not already present
             if not hasattr(player, 'checkpoint_mutex'):
@@ -602,8 +603,9 @@ def launch_rlg_hydra(cfg: DictConfig):
                 player.checkpoint_to_load = None
 
             print(f"✓ Dynamic checkpoint reloading enabled")
-            print(f"  Checkpoint will be checked every {player.update_checkpoint_freq} steps")
-            print(f"  Use control panel to switch checkpoints on-the-fly\n")
+            print(f"  Checkpoint will be checked every {checkpoint_update_freq} steps")
+            print(f"  Use control panel to switch checkpoints on-the-fly")
+            print(f"  Tip: Adjust with checkpoint_update_freq parameter (smaller = more responsive)\n")
 
             # Run player
             player.run()

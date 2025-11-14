@@ -69,11 +69,27 @@ python isaacgymenvs/train_play.py task=Ant mode=play experiment=Ant_2025-01-14_1
 python isaacgymenvs/train_play.py task=Ant mode=play experiment=Ant
 ```
 
+**Optional: Launch checkpoint control panel (Terminal 3):**
+```bash
+# Control panel allows switching between different checkpoints during visualization
+python isaacgymenvs/checkpoint_control_panel.py --experiment=Ant
+```
+
 **How it works:**
 - Train mode runs headless, saves checkpoint to `runs/<task_name>_<timestamp>/nn/latest.pth` periodically
 - Play mode requires `experiment` parameter to specify which training run to visualize
 - Play mode waits for checkpoint (if not yet created), then visualizes with 1-4 environments, auto-reloads on checkpoint update
 - Both processes run independently without interfering with each other
+- Checkpoint control panel (optional) provides GUI to switch between different saved checkpoints during visualization
+
+**Checkpoint Control Panel:**
+- Provides a Tkinter GUI to manage checkpoint loading during visualization
+- Two modes:
+  - Auto mode: Automatically loads latest.pth as it updates (default behavior)
+  - Manual mode: Select any specific checkpoint from the list
+- Lists all available checkpoints with file size and modification time
+- Auto-refreshes checkpoint list every 5 seconds
+- Communicates with play mode via `.checkpoint_state.json` file in experiment directory
 
 **Configuration options:**
 - `checkpoint_save_freq=100`: Save checkpoint every N **epochs** (training iterations, not seconds) - train mode

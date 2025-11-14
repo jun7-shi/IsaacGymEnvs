@@ -452,14 +452,20 @@ def launch_rlg_hydra(cfg: DictConfig):
     # For play mode, run in a loop to reload checkpoint periodically
     if cfg.mode == 'play':
         import datetime
+        import json
 
         reload_interval = cfg.get('checkpoint_reload_interval', 30)  # seconds
+        state_file = os.path.join(experiment_dir, '.checkpoint_state.json')
+
         print(f"\n{'='*60}")
         print(f"VISUALIZATION MODE")
         print(f"{'='*60}")
         print(f"Checkpoint: {cfg.checkpoint}")
         print(f"Reload interval: {reload_interval} seconds")
         print(f"Number of environments: {cfg.num_envs}")
+        print(f"\nControl Panel:")
+        print(f"  Launch control panel to switch checkpoints:")
+        print(f"  python isaacgymenvs/checkpoint_control_panel.py --experiment={cfg.experiment}")
         print(f"\nViewer Controls:")
         print(f"  Mouse Left - Rotate camera")
         print(f"  Mouse Middle - Pan camera")
@@ -470,12 +476,38 @@ def launch_rlg_hydra(cfg: DictConfig):
         print(f"{'='*60}\n")
 
         iteration_count = 0
+        last_state_update = None
 
         while True:
             try:
                 iteration_count += 1
+                need_reload = False
+                reload_reason = ""
 
-                # Get the latest modification time of checkpoint
+                # Check control panel state file first
+                if os.path.exists(state_file):
+                    try:
+                        with open(state_file, 'r') as f:
+                            state = json.load(f)
+
+                        state_update_time = state.get('last_update', None)
+
+                        # Check if state has been updated
+                        if state_update_time != last_state_update:
+                            new_checkpoint = state.get('checkpoint_path', None)
+                            if new_checkpoint and new_checkpoint != cfg.checkpoint:
+                                if os.path.exists(new_checkpoint):
+                                    cfg.checkpoint = new_checkpoint
+                                    need_reload = True
+                                    reload_reason = "Control panel changed checkpoint"
+                                    last_state_update = state_update_time
+                                else:
+                                    print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Warning: Checkpoint from control panel not found: {new_checkpoint}")
+
+                    except Exception as e:
+                        print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Warning: Error reading state file: {e}")
+
+                # Get the latest modification time of current checkpoint
                 last_modified = os.path.getmtime(cfg.checkpoint) if os.path.exists(cfg.checkpoint) else 0
 
                 if iteration_count == 1:
@@ -500,25 +532,32 @@ def launch_rlg_hydra(cfg: DictConfig):
                 print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Waiting {reload_interval}s for checkpoint updates...")
                 time.sleep(reload_interval)
 
+                # Check if checkpoint file has been modified (for auto mode with latest.pth)
                 if os.path.exists(cfg.checkpoint):
                     current_modified = os.path.getmtime(cfg.checkpoint)
                     if current_modified > last_modified:
-                        file_size = os.path.getsize(cfg.checkpoint) / (1024 * 1024)  # MB
-                        mod_time = datetime.datetime.fromtimestamp(current_modified).strftime('%Y-%m-%d %H:%M:%S')
-                        print(f"\n{'='*60}")
-                        print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] NEW CHECKPOINT DETECTED!")
-                        print(f"{'='*60}")
-                        print(f"  File: {cfg.checkpoint}")
-                        print(f"  Size: {file_size:.2f} MB")
-                        print(f"  Modified: {mod_time}")
-                        print(f"  Reloading model...")
-                        # Reset and reload
-                        runner.reset()
-                        runner.load(rlg_config_dict)
-                        print(f"  Model reloaded successfully!")
-                        print(f"{'='*60}\n")
-                    else:
-                        print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] No updates. Continuing with current model...")
+                        need_reload = True
+                        reload_reason = "Checkpoint file updated"
+
+                # Reload if needed
+                if need_reload:
+                    file_size = os.path.getsize(cfg.checkpoint) / (1024 * 1024)  # MB
+                    mod_time = datetime.datetime.fromtimestamp(os.path.getmtime(cfg.checkpoint)).strftime('%Y-%m-%d %H:%M:%S')
+                    print(f"\n{'='*60}")
+                    print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] NEW CHECKPOINT DETECTED!")
+                    print(f"  Reason: {reload_reason}")
+                    print(f"{'='*60}")
+                    print(f"  File: {cfg.checkpoint}")
+                    print(f"  Size: {file_size:.2f} MB")
+                    print(f"  Modified: {mod_time}")
+                    print(f"  Reloading model...")
+                    # Reset and reload
+                    runner.reset()
+                    runner.load(rlg_config_dict)
+                    print(f"  Model reloaded successfully!")
+                    print(f"{'='*60}\n")
+                else:
+                    print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] No updates. Continuing with current model...")
 
             except KeyboardInterrupt:
                 print(f"\n[{datetime.datetime.now().strftime('%H:%M:%S')}] Visualization stopped by user")

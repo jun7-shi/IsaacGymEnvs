@@ -46,6 +46,14 @@ python isaacgymenvs/train_play.py task=Ant mode=play experiment=Ant_2025-01-14_1
 python isaacgymenvs/train_play.py task=Ant mode=play experiment=Ant
 ```
 
+**3. （可选）启动Checkpoint控制面板（终端3）：**
+```bash
+cd /path/to/IsaacGymEnvs
+mamba activate rlgpu
+# 启动控制面板，用于在可视化过程中切换不同的checkpoint
+python isaacgymenvs/checkpoint_control_panel.py --experiment=Ant
+```
+
 ### 进阶配置
 
 #### 训练模式参数
@@ -202,6 +210,102 @@ python isaacgymenvs/train_play.py task=Ant mode=play experiment=Ant num_envs=4
 
 **提示**：如果启动时视角离得太远，使用鼠标滚轮拉近，然后用鼠标左键调整到合适的角度。
 
+## Checkpoint控制面板
+
+### 功能说明
+
+Checkpoint控制面板是一个可选的GUI工具，允许您在可视化过程中灵活切换不同的checkpoint模型。
+
+**主要特性：**
+- 图形化界面，操作简单直观
+- 实时显示所有可用的checkpoint文件
+- 支持两种模式：
+  - **自动模式**：始终加载最新的`latest.pth`（跟随训练进度）
+  - **手动模式**：选择任意已保存的checkpoint进行查看
+- 自动刷新checkpoint列表（每5秒）
+- 显示checkpoint文件大小和修改时间
+
+### 使用方法
+
+**1. 启动控制面板：**
+```bash
+python isaacgymenvs/checkpoint_control_panel.py --experiment=<experiment_name>
+```
+
+例如：
+```bash
+# 使用完整目录名
+python isaacgymenvs/checkpoint_control_panel.py --experiment=Ant_2025-01-14_10-30-45
+
+# 或使用部分名称（会自动找到最新匹配的目录）
+python isaacgymenvs/checkpoint_control_panel.py --experiment=Ant
+```
+
+**2. 控制面板界面说明：**
+
+- **Mode（模式选择）**：
+  - `Auto`：自动模式，始终加载latest.pth，随训练进度更新
+  - `Manual`：手动模式，可以选择特定的checkpoint进行查看
+
+- **Available Checkpoints（可用的Checkpoint列表）**：
+  - 显示实验目录下所有.pth文件
+  - 按修改时间排序（最新的在上面）
+  - 格式：`文件名 (大小) - 修改时间`
+
+- **按钮**：
+  - `Refresh List`：手动刷新checkpoint列表
+  - `Load Selected`：加载当前选中的checkpoint
+
+- **Current Checkpoint（当前加载的Checkpoint）**：
+  - 显示正在可视化的checkpoint信息
+
+**3. 使用流程：**
+
+```bash
+# 终端1 - 启动训练
+python isaacgymenvs/train_play.py task=Ant mode=train
+
+# 终端2 - 启动可视化
+python isaacgymenvs/train_play.py task=Ant mode=play experiment=Ant
+
+# 终端3 - 启动控制面板
+python isaacgymenvs/checkpoint_control_panel.py --experiment=Ant
+```
+
+在控制面板中：
+- 默认为Auto模式，自动跟随训练进度
+- 切换到Manual模式，可以选择之前的任意checkpoint
+- 选中一个checkpoint后，点击"Load Selected"，可视化窗口会自动切换到该checkpoint
+- 切换回Auto模式，继续跟随最新的训练进度
+
+### 工作原理
+
+控制面板通过在实验目录下创建`.checkpoint_state.json`文件与可视化进程通信：
+
+1. 控制面板监测用户的选择，更新state文件
+2. 可视化进程（play mode）定期检查state文件
+3. 如果检测到checkpoint变更，自动重新加载新的checkpoint
+4. 整个过程无需重启可视化进程
+
+### 典型使用场景
+
+**场景1：训练过程中回顾早期checkpoint**
+- 训练进行到500个epoch
+- 想看看第100个epoch时的表现
+- 在控制面板切换到Manual模式，选择对应的checkpoint
+- 查看完毕后切换回Auto模式，继续观察最新进度
+
+**场景2：比较不同checkpoint的表现**
+- 在控制面板列表中依次选择不同的checkpoint
+- 观察不同训练阶段agent的行为变化
+- 找出表现最好的checkpoint
+
+**场景3：调试特定checkpoint**
+- 训练曲线显示某个epoch出现异常
+- 使用控制面板加载该checkpoint
+- 在可视化中仔细观察agent的行为
+- 分析问题原因
+
 ## 常见问题
 
 ### Q: 可视化进程显示"Waiting for checkpoint"？
@@ -219,10 +323,10 @@ A:
 A: 可以。使用不同的device参数：
 ```bash
 # 终端1 - 在GPU 0上训练
-python isaacgymenvs/train_new.py task=Ant mode=train sim_device=cuda:0 rl_device=cuda:0
+python isaacgymenvs/train_play.py task=Ant mode=train experiment=Ant sim_device=cuda:0 rl_device=cuda:0
 
 # 终端2 - 在GPU 1上可视化
-python isaacgymenvs/train_new.py task=Ant mode=play sim_device=cuda:1 rl_device=cuda:1 graphics_device_id=1
+python isaacgymenvs/train_play.py task=Ant mode=play experiment=Ant sim_device=cuda:1 rl_device=cuda:1 graphics_device_id=1
 ```
 
 ### Q: 可视化进程会影响训练性能吗？
@@ -234,6 +338,12 @@ A: 影响很小。因为：
 ### Q: 如何保存checkpoint的历史版本而不是覆盖？
 A: `train_play.py` 的 `latest.pth` 是专门用于可视化的固定checkpoint。rl_games仍会按照配置保存历史checkpoint到实验目录的 `nn/` 文件夹，这些checkpoint不会被覆盖。
 
+### Q: Checkpoint控制面板是必须的吗？
+A: 不是必须的。控制面板是可选功能。如果您只需要跟随训练进度实时查看最新效果，只需运行train和play两个进程即可。控制面板主要用于需要在可视化过程中切换查看不同checkpoint的场景。
+
+### Q: 在控制面板中切换checkpoint会中断可视化吗？
+A: 不会。切换checkpoint时，可视化进程会自动重新加载模型并继续运行，整个过程平滑无缝，无需重启可视化窗口。
+
 ## 与原版train.py的区别
 
 | 特性 | train.py | train_play.py |
@@ -244,6 +354,7 @@ A: `train_play.py` 的 `latest.pth` 是专门用于可视化的固定checkpoint�
 | 自动checkpoint管理 | ✗ | ✓ |
 | 可视化自动重载 | ✗ | ✓ |
 | 自动时间戳目录 | ✗ | ✓ |
+| Checkpoint控制面板 | ✗ | ✓ |
 
 ## 技术细节
 

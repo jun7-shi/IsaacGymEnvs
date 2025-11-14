@@ -42,15 +42,19 @@ cd /path/to/IsaacGymEnvs
 mamba activate rlgpu
 # 需要指定训练进程的experiment目录名（从训练输出获取）
 python isaacgymenvs/train_play.py task=Ant mode=play experiment=Ant_2025-01-14_10-30-45
+
 # 或者使用部分名称，脚本会自动找到最新的匹配目录
 python isaacgymenvs/train_play.py task=Ant mode=play experiment=Ant
+
+# 推荐：启动时自动打开控制面板（只需2个终端）
+python isaacgymenvs/train_play.py task=Ant mode=play experiment=Ant enable_control_panel=True
 ```
 
-**3. （可选）启动Checkpoint控制面板（终端3）：**
+**方式二：单独启动Checkpoint控制面板（需要3个终端）：**
 ```bash
 cd /path/to/IsaacGymEnvs
 mamba activate rlgpu
-# 启动控制面板，用于在可视化过程中切换不同的checkpoint
+# 如果没有使用enable_control_panel=True，可以单独启动控制面板
 python isaacgymenvs/checkpoint_control_panel.py --experiment=Ant
 ```
 
@@ -227,21 +231,34 @@ Checkpoint控制面板是一个可选的GUI工具，允许您在可视化过程�
 
 ### 使用方法
 
-**1. 启动控制面板：**
+**方式一：集成启动（推荐，只需2个终端）**
+
 ```bash
-python isaacgymenvs/checkpoint_control_panel.py --experiment=<experiment_name>
+# 终端1 - 启动训练
+python isaacgymenvs/train_play.py task=Ant mode=train
+
+# 终端2 - 启动可视化和控制面板
+python isaacgymenvs/train_play.py task=Ant mode=play experiment=Ant enable_control_panel=True
 ```
 
-例如：
-```bash
-# 使用完整目录名
-python isaacgymenvs/checkpoint_control_panel.py --experiment=Ant_2025-01-14_10-30-45
+控制面板会自动在后台启动，弹出GUI窗口。
 
-# 或使用部分名称（会自动找到最新匹配的目录）
+**方式二：单独启动（需要3个终端）**
+
+如果您想手动控制控制面板的启动时机：
+
+```bash
+# 终端1 - 启动训练
+python isaacgymenvs/train_play.py task=Ant mode=train
+
+# 终端2 - 启动可视化
+python isaacgymenvs/train_play.py task=Ant mode=play experiment=Ant
+
+# 终端3 - 启动控制面板
 python isaacgymenvs/checkpoint_control_panel.py --experiment=Ant
 ```
 
-**2. 控制面板界面说明：**
+**控制面板界面说明：**
 
 - **Mode（模式选择）**：
   - `Auto`：自动模式，始终加载latest.pth，随训练进度更新
@@ -259,20 +276,7 @@ python isaacgymenvs/checkpoint_control_panel.py --experiment=Ant
 - **Current Checkpoint（当前加载的Checkpoint）**：
   - 显示正在可视化的checkpoint信息
 
-**3. 使用流程：**
-
-```bash
-# 终端1 - 启动训练
-python isaacgymenvs/train_play.py task=Ant mode=train
-
-# 终端2 - 启动可视化
-python isaacgymenvs/train_play.py task=Ant mode=play experiment=Ant
-
-# 终端3 - 启动控制面板
-python isaacgymenvs/checkpoint_control_panel.py --experiment=Ant
-```
-
-在控制面板中：
+**在控制面板中的操作：**
 - 默认为Auto模式，自动跟随训练进度
 - 切换到Manual模式，可以选择之前的任意checkpoint
 - 选中一个checkpoint后，点击"Load Selected"，可视化窗口会自动切换到该checkpoint

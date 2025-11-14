@@ -450,9 +450,28 @@ def launch_rlg_hydra(cfg: DictConfig):
     if cfg.mode == 'play':
         import datetime
         import json
+        import threading
 
         reload_interval = cfg.get('checkpoint_reload_interval', 30)  # seconds
         state_file = os.path.join(experiment_dir, '.checkpoint_state.json')
+
+        # Launch control panel in background thread if enabled
+        control_panel_thread = None
+        if cfg.get('enable_control_panel', False):
+            try:
+                from isaacgymenvs.checkpoint_control_panel import CheckpointControlPanel
+
+                def run_control_panel():
+                    panel = CheckpointControlPanel(experiment_dir)
+                    panel.run()
+
+                control_panel_thread = threading.Thread(target=run_control_panel, daemon=True)
+                control_panel_thread.start()
+                print(f"✓ Checkpoint control panel launched in background")
+            except Exception as e:
+                print(f"Warning: Failed to launch control panel: {e}")
+                print(f"You can still launch it manually:")
+                print(f"  python isaacgymenvs/checkpoint_control_panel.py --experiment={cfg.experiment}")
 
         # Print header with checkpoint information
         print(f"\n{'='*70}")
@@ -472,8 +491,13 @@ def launch_rlg_hydra(cfg: DictConfig):
         print(f"  Number of environments: {cfg.num_envs}")
         print(f"  Experiment: {cfg.experiment}")
         print(f"\n{'CONTROL PANEL':^70}")
-        print(f"  Launch control panel to switch checkpoints:")
-        print(f"  python isaacgymenvs/checkpoint_control_panel.py --experiment={cfg.experiment}")
+        if cfg.get('enable_control_panel', False):
+            print(f"  Control panel is running in background window")
+        else:
+            print(f"  Launch control panel to switch checkpoints:")
+            print(f"    Option 1: Add enable_control_panel=True to command")
+            print(f"    Option 2: Run manually:")
+            print(f"      python isaacgymenvs/checkpoint_control_panel.py --experiment={cfg.experiment}")
         print(f"\n{'VIEWER CONTROLS':^70}")
         print(f"  Mouse Left    - Rotate camera")
         print(f"  Mouse Middle  - Pan camera")

@@ -65,11 +65,15 @@ python isaacgymenvs/train_play.py task=Ant mode=train
 ```bash
 # Must specify experiment directory name from training
 python isaacgymenvs/train_play.py task=Ant mode=play experiment=Ant_2025-01-14_10-30-45
+
 # Or use partial name - will auto-find the latest matching directory
 python isaacgymenvs/train_play.py task=Ant mode=play experiment=Ant
+
+# Or with integrated control panel (recommended)
+python isaacgymenvs/train_play.py task=Ant mode=play experiment=Ant enable_control_panel=True
 ```
 
-**Optional: Launch checkpoint control panel (Terminal 3):**
+**Alternative: Launch control panel separately (Terminal 3):**
 ```bash
 # Control panel allows switching between different checkpoints during visualization
 python isaacgymenvs/checkpoint_control_panel.py --experiment=Ant

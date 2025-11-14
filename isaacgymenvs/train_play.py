@@ -284,6 +284,9 @@ def launch_rlg_hydra(cfg: DictConfig):
         checkpoint_dir = os.path.join(experiment_dir, 'nn')
         checkpoint_filename = 'latest'  # algo.save() will add .pth automatically
 
+        # Set full_experiment_name for rl_games to use our experiment directory
+        cfg.full_experiment_name = experiment_dir
+
         print(f"\nTraining will save to: {experiment_dir}")
         print(f"Checkpoint will be saved to: {checkpoint_dir}/latest.pth\n")
 
@@ -450,24 +453,27 @@ def launch_rlg_hydra(cfg: DictConfig):
     if cfg.mode == 'play':
         import datetime
         import json
-        import threading
+        import subprocess
+        import sys
 
         reload_interval = cfg.get('checkpoint_reload_interval', 30)  # seconds
         state_file = os.path.join(experiment_dir, '.checkpoint_state.json')
 
-        # Launch control panel in background thread if enabled
-        control_panel_thread = None
+        # Launch control panel in separate process if enabled
+        control_panel_process = None
         if cfg.get('enable_control_panel', False):
             try:
-                from isaacgymenvs.checkpoint_control_panel import CheckpointControlPanel
+                # Launch control panel as a separate process
+                script_path = os.path.join(os.path.dirname(__file__), 'checkpoint_control_panel.py')
+                cmd = [sys.executable, script_path, f'--experiment={cfg.experiment}']
 
-                def run_control_panel():
-                    panel = CheckpointControlPanel(experiment_dir)
-                    panel.run()
-
-                control_panel_thread = threading.Thread(target=run_control_panel, daemon=True)
-                control_panel_thread.start()
-                print(f"✓ Checkpoint control panel launched in background")
+                control_panel_process = subprocess.Popen(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True
+                )
+                print(f"✓ Checkpoint control panel launched (PID: {control_panel_process.pid})")
             except Exception as e:
                 print(f"Warning: Failed to launch control panel: {e}")
                 print(f"You can still launch it manually:")
@@ -598,6 +604,14 @@ def launch_rlg_hydra(cfg: DictConfig):
 
             except KeyboardInterrupt:
                 print(f"\n[{datetime.datetime.now().strftime('%H:%M:%S')}] Visualization stopped by user")
+                # Clean up control panel process if running
+                if control_panel_process is not None:
+                    try:
+                        control_panel_process.terminate()
+                        control_panel_process.wait(timeout=3)
+                        print(f"Control panel process terminated")
+                    except:
+                        control_panel_process.kill()
                 break
             except Exception as e:
                 print(f"\n[{datetime.datetime.now().strftime('%H:%M:%S')}] Error in visualization loop: {e}")

@@ -47,9 +47,9 @@ python train.py task=Ant checkpoint=runs/Ant/nn/Ant.pth test=True num_envs=64
 
 **Note:** Escape special characters in checkpoint paths: `checkpoint="./runs/Ant/nn/last_Antep\=501rew\[5981.31\].pth"`
 
-### Train + Visualize Mode (train_new.py)
+### Train + Visualize Mode (train_play.py)
 
-`train_new.py` (located in `isaacgymenvs/`) supports simultaneous training and visualization in separate processes:
+`train_play.py` (located in `isaacgymenvs/`) supports simultaneous training and visualization in separate processes:
 
 **Prerequisites:**
 ```bash
@@ -58,23 +58,28 @@ mamba activate rlgpu  # or conda activate rlgpu
 
 **Start training (Terminal 1):**
 ```bash
-python isaacgymenvs/train_new.py task=Ant mode=train
+python isaacgymenvs/train_play.py task=Ant mode=train
 ```
 
 **Start visualization (Terminal 2):**
 ```bash
-python isaacgymenvs/train_new.py task=Ant mode=play
+# Must specify experiment directory name from training
+python isaacgymenvs/train_play.py task=Ant mode=play experiment=Ant_2025-01-14_10-30-45
+# Or use partial name - will auto-find the latest matching directory
+python isaacgymenvs/train_play.py task=Ant mode=play experiment=Ant
 ```
 
 **How it works:**
-- Train mode runs headless, saves checkpoint to `runs/<task>/nn/latest.pth` periodically
-- Play mode waits for checkpoint, then visualizes with 1-4 environments, auto-reloads on checkpoint update
+- Train mode runs headless, saves checkpoint to `runs/<task_name>_<timestamp>/nn/latest.pth` periodically
+- Play mode requires `experiment` parameter to specify which training run to visualize
+- Play mode waits for checkpoint (if not yet created), then visualizes with 1-4 environments, auto-reloads on checkpoint update
 - Both processes run independently without interfering with each other
 
 **Configuration options:**
 - `checkpoint_save_freq=100`: Save checkpoint every N **epochs** (training iterations, not seconds) - train mode
 - `checkpoint_reload_interval=30`: Check for updates every N **seconds** - play mode
 - `num_envs=4`: Number of visualization environments (play mode)
+- `experiment=<name>`: Experiment directory name (required for play mode, optional for train mode)
 
 **Note:** An epoch is one training iteration cycle in rl_games, not a time period.
 

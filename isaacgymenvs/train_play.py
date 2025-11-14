@@ -273,19 +273,59 @@ def launch_rlg_hydra(cfg: DictConfig):
     time_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     run_name = f"{cfg.wandb_name}_{time_str}"
 
-    # Setup checkpoint path
-    experiment_name = cfg.experiment if cfg.experiment else cfg.task_name
-    checkpoint_dir = os.path.join('runs', experiment_name, 'nn')
-    checkpoint_filename = 'latest'  # algo.save() will add .pth automatically
-    checkpoint_path = os.path.join(checkpoint_dir, checkpoint_filename + '.pth')  # For loading in play mode
+    # Setup experiment directory and checkpoint path
+    if cfg.mode == 'train':
+        # Training mode: use timestamped directory
+        if cfg.experiment:
+            experiment_dir_name = f"{cfg.experiment}_{time_str}"
+        else:
+            experiment_dir_name = f"{cfg.task_name}_{time_str}"
+        experiment_dir = os.path.join('runs', experiment_dir_name)
+        checkpoint_dir = os.path.join(experiment_dir, 'nn')
+        checkpoint_filename = 'latest'  # algo.save() will add .pth automatically
 
-    # For play mode, wait for checkpoint if it doesn't exist
-    if cfg.mode == 'play':
+        print(f"\nTraining will save to: {experiment_dir}")
+        print(f"Checkpoint will be saved to: {checkpoint_dir}/latest.pth\n")
+
+    else:  # play mode
+        # Play mode: must specify experiment directory
+        if not cfg.experiment:
+            raise ValueError(
+                "Play mode requires 'experiment' parameter to specify which training run to visualize.\n"
+                "Example: python isaacgymenvs/train_play.py task=Ant mode=play experiment=Ant_14-01-05-06\n"
+                "Available runs in 'runs/' directory:"
+            )
+
+        experiment_dir = os.path.join('runs', cfg.experiment)
+        checkpoint_dir = os.path.join(experiment_dir, 'nn')
+        checkpoint_filename = 'latest'
+        checkpoint_path = os.path.join(checkpoint_dir, checkpoint_filename + '.pth')
+
+        # Check if experiment directory exists
+        if not os.path.exists(experiment_dir):
+            # Try to find the most recent matching directory
+            import glob
+            pattern = os.path.join('runs', f"{cfg.experiment}*")
+            matching_dirs = sorted(glob.glob(pattern), reverse=True)
+            if matching_dirs:
+                experiment_dir = matching_dirs[0]
+                checkpoint_dir = os.path.join(experiment_dir, 'nn')
+                checkpoint_path = os.path.join(checkpoint_dir, checkpoint_filename + '.pth')
+                print(f"\nFound experiment directory: {experiment_dir}")
+            else:
+                raise ValueError(
+                    f"Experiment directory not found: {experiment_dir}\n"
+                    f"Please check available runs in 'runs/' directory"
+                )
+
+        # Wait for checkpoint if it doesn't exist
         if not os.path.exists(checkpoint_path):
+            print(f"Checkpoint not found yet: {checkpoint_path}")
             wait_for_checkpoint(checkpoint_path)
+
         # Set checkpoint to load
         cfg.checkpoint = checkpoint_path
-        print(f"Will load checkpoint from: {cfg.checkpoint}")
+        print(f"\nWill load checkpoint from: {cfg.checkpoint}\n")
 
     # ensure checkpoints can be specified as relative paths
     if cfg.checkpoint:

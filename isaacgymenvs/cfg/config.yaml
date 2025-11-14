@@ -41,7 +41,7 @@ sigma: ''
 # set to True to use multi-gpu training
 multi_gpu: False
 
-# train_new.py specific arguments
+# train_play.py specific arguments
 # mode - 'train' for training, 'play' for visualization
 mode: 'train'
 # how often to save checkpoint in train mode (in epochs/iterations)

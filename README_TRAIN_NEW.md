@@ -1,8 +1,8 @@
-# Train_new.py - 训练与可视化分离模式
+# train_play.py - 训练与可视化分离模式
 
 ## 概述
 
-`train_new.py` 是一个增强版的训练脚本，支持同时运行训练进程和可视化进程。这样可以在headless模式下高效训练，同时在另一个窗口实时查看训练效果。
+`train_play.py` 是一个增强版的训练脚本，支持同时运行训练进程和可视化进程。这样可以在headless模式下高效训练，同时在另一个窗口实时查看训练效果。
 
 ## 环境要求
 
@@ -33,14 +33,17 @@ mamba activate rlgpu
 ```bash
 cd /path/to/IsaacGymEnvs
 mamba activate rlgpu
-python isaacgymenvs/train_new.py task=Ant mode=train
+python isaacgymenvs/train_play.py task=Ant mode=train
 ```
 
 **2. 启动可视化进程（终端2）：**
 ```bash
 cd /path/to/IsaacGymEnvs
 mamba activate rlgpu
-python isaacgymenvs/train_new.py task=Ant mode=play
+# 需要指定训练进程的experiment目录名（从训练输出获取）
+python isaacgymenvs/train_play.py task=Ant mode=play experiment=Ant_2025-01-14_10-30-45
+# 或者使用部分名称，脚本会自动找到最新的匹配目录
+python isaacgymenvs/train_play.py task=Ant mode=play experiment=Ant
 ```
 
 ### 进阶配置
@@ -49,35 +52,38 @@ python isaacgymenvs/train_new.py task=Ant mode=play
 
 ```bash
 # 基础训练
-python isaacgymenvs/train_new.py task=Ant mode=train
+python isaacgymenvs/train_play.py task=Ant mode=train
 
 # 自定义checkpoint保存频率（每50个epoch保存一次）
-python isaacgymenvs/train_new.py task=Ant mode=train checkpoint_save_freq=50
+python isaacgymenvs/train_play.py task=Ant mode=train checkpoint_save_freq=50
 
 # 指定实验名称
-python isaacgymenvs/train_new.py task=Ant mode=train experiment=my_ant_experiment
+python isaacgymenvs/train_play.py task=Ant mode=train experiment=my_ant_experiment
 
 # 修改环境数量
-python isaacgymenvs/train_new.py task=Ant mode=train num_envs=8192
+python isaacgymenvs/train_play.py task=Ant mode=train num_envs=8192
 
 # 多GPU训练
-torchrun --standalone --nnodes=1 --nproc_per_node=2 isaacgymenvs/train_new.py task=Ant mode=train multi_gpu=True
+torchrun --standalone --nnodes=1 --nproc_per_node=2 isaacgymenvs/train_play.py task=Ant mode=train multi_gpu=True
 ```
 
 #### 可视化模式参数
 
 ```bash
-# 基础可视化
-python isaacgymenvs/train_new.py task=Ant mode=play
+# 基础可视化（必须指定experiment参数）
+python isaacgymenvs/train_play.py task=Ant mode=play experiment=Ant_2025-01-14_10-30-45
+
+# 使用部分名称自动匹配最新目录
+python isaacgymenvs/train_play.py task=Ant mode=play experiment=Ant
 
 # 自定义可视化环境数量（1-4个推荐）
-python isaacgymenvs/train_new.py task=Ant mode=play num_envs=2
+python isaacgymenvs/train_play.py task=Ant mode=play experiment=Ant num_envs=2
 
 # 自定义checkpoint重载间隔（秒）
-python isaacgymenvs/train_new.py task=Ant mode=play checkpoint_reload_interval=60
+python isaacgymenvs/train_play.py task=Ant mode=play experiment=Ant checkpoint_reload_interval=60
 
-# 匹配训练进程的实验名称
-python isaacgymenvs/train_new.py task=Ant mode=play experiment=my_ant_experiment
+# 匹配训练进程的自定义实验名称
+python isaacgymenvs/train_play.py task=Ant mode=play experiment=my_ant_experiment
 ```
 
 ### 完整示例
@@ -86,40 +92,45 @@ python isaacgymenvs/train_new.py task=Ant mode=play experiment=my_ant_experiment
 
 **终端1 - 训练：**
 ```bash
-python isaacgymenvs/train_new.py task=Ant mode=train checkpoint_save_freq=100 num_envs=4096
+python isaacgymenvs/train_play.py task=Ant mode=train checkpoint_save_freq=100 num_envs=4096
+# 训练会输出类似: Training will save to: runs/Ant_2025-01-14_10-30-45
 ```
 
 **终端2 - 可视化：**
 ```bash
-python isaacgymenvs/train_new.py task=Ant mode=play num_envs=4 checkpoint_reload_interval=30
+# 使用训练输出的目录名，或使用部分名称自动匹配
+python isaacgymenvs/train_play.py task=Ant mode=play experiment=Ant num_envs=4 checkpoint_reload_interval=30
 ```
 
 #### 示例2：Humanoid训练 + 可视化（自定义实验名）
 
 **终端1 - 训练：**
 ```bash
-python isaacgymenvs/train_new.py task=Humanoid mode=train experiment=humanoid_v1 checkpoint_save_freq=50
+python isaacgymenvs/train_play.py task=Humanoid mode=train experiment=humanoid_v1 checkpoint_save_freq=50
+# 训练会输出类似: Training will save to: runs/humanoid_v1_2025-01-14_10-30-45
 ```
 
 **终端2 - 可视化：**
 ```bash
-python isaacgymenvs/train_new.py task=Humanoid mode=play experiment=humanoid_v1 num_envs=2
+# 使用自定义实验名的部分名称即可自动匹配
+python isaacgymenvs/train_play.py task=Humanoid mode=play experiment=humanoid_v1 num_envs=2
 ```
 
 #### 示例3：使用WandB追踪
 
 **终端1 - 训练：**
 ```bash
-python isaacgymenvs/train_new.py task=Ant mode=train \
+python isaacgymenvs/train_play.py task=Ant mode=train \
     wandb_activate=True \
     wandb_entity=your_entity \
     wandb_project=isaacgym_training \
     checkpoint_save_freq=100
+# 训练会输出类似: Training will save to: runs/Ant_2025-01-14_10-30-45
 ```
 
 **终端2 - 可视化：**
 ```bash
-python isaacgymenvs/train_new.py task=Ant mode=play num_envs=4
+python isaacgymenvs/train_play.py task=Ant mode=play experiment=Ant num_envs=4
 ```
 
 ## 配置参数说明
@@ -154,10 +165,11 @@ python isaacgymenvs/train_new.py task=Ant mode=play num_envs=4
 
 ### Checkpoint存储位置
 
-默认checkpoint保存在：`runs/<experiment_name>/nn/latest.pth`
+训练模式checkpoint保存在：`runs/<experiment_name>_<timestamp>/nn/latest.pth`
 
-- `<experiment_name>` 默认为任务名称（如 `Ant`）
-- 可通过 `experiment=` 参数自定义
+- `<experiment_name>` 默认为任务名称（如 `Ant`）,会自动添加时间戳
+- `<timestamp>` 格式为 `YYYY-MM-DD_HH-MM-SS`
+- 可通过 `experiment=` 参数自定义实验名称
 
 ### Checkpoint保存策略
 
@@ -167,6 +179,8 @@ python isaacgymenvs/train_new.py task=Ant mode=play num_envs=4
 - 原有的checkpoint保存机制（rl_games自带）仍然正常工作
 
 **可视化模式：**
+- 必须指定 `experiment` 参数来指定要可视化的训练运行
+- 如果使用部分名称（如 `experiment=Ant`），会自动找到最新匹配的目录
 - 启动时等待checkpoint出现（如果不存在）
 - 每 `checkpoint_reload_interval` 秒检查checkpoint是否更新
 - 如果文件有更新，自动重新加载并继续可视化
@@ -193,6 +207,9 @@ python isaacgymenvs/train_new.py task=Ant mode=play num_envs=4
 ### Q: 可视化进程显示"Waiting for checkpoint"？
 A: 这是正常的。可视化进程在等待训练进程生成第一个checkpoint。请确保训练进程正在运行并已经开始训练。
 
+### Q: 启动play模式时提示需要experiment参数？
+A: play模式必须指定experiment参数来指定要可视化哪个训练运行。可以使用完整目录名（如 `experiment=Ant_2025-01-14_10-30-45`）或部分名称（如 `experiment=Ant`），后者会自动找到最新匹配的目录。
+
 ### Q: 如何停止训练或可视化？
 A:
 - 可视化进程：按 `ESC` 键或 `Ctrl+C`
@@ -215,17 +232,18 @@ A: 影响很小。因为：
 3. 两个进程独立运行，互不干扰
 
 ### Q: 如何保存checkpoint的历史版本而不是覆盖？
-A: `train_new.py` 的 `latest.pth` 是专门用于可视化的固定checkpoint。rl_games仍会按照配置保存历史checkpoint到 `runs/<task>/nn/` 目录，这些checkpoint不会被覆盖。
+A: `train_play.py` 的 `latest.pth` 是专门用于可视化的固定checkpoint。rl_games仍会按照配置保存历史checkpoint到实验目录的 `nn/` 文件夹，这些checkpoint不会被覆盖。
 
 ## 与原版train.py的区别
 
-| 特性 | train.py | train_new.py |
+| 特性 | train.py | train_play.py |
 |------|----------|--------------|
 | 训练功能 | ✓ | ✓ |
 | 测试功能 | ✓ | ✓ |
 | 同时训练+可视化 | ✗ | ✓ |
 | 自动checkpoint管理 | ✗ | ✓ |
 | 可视化自动重载 | ✗ | ✓ |
+| 自动时间戳目录 | ✗ | ✓ |
 
 ## 技术细节
 

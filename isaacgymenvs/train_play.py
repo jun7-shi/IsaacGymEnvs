@@ -513,110 +513,52 @@ def launch_rlg_hydra(cfg: DictConfig):
         print(f"  ESC           - Exit visualization")
         print(f"{'='*70}\n")
 
-        iteration_count = 0
-        last_state_update = None
-
-        while True:
+        # Check if control panel wants to load a different checkpoint
+        if os.path.exists(state_file):
             try:
-                iteration_count += 1
-                need_reload = False
-                reload_reason = ""
-
-                # Check control panel state file first
-                if os.path.exists(state_file):
-                    try:
-                        with open(state_file, 'r') as f:
-                            state = json.load(f)
-
-                        state_update_time = state.get('last_update', None)
-
-                        # Check if state has been updated
-                        if state_update_time != last_state_update:
-                            new_checkpoint = state.get('checkpoint_path', None)
-                            if new_checkpoint and new_checkpoint != cfg.checkpoint:
-                                if os.path.exists(new_checkpoint):
-                                    cfg.checkpoint = new_checkpoint
-                                    need_reload = True
-                                    reload_reason = "Control panel changed checkpoint"
-                                    last_state_update = state_update_time
-                                else:
-                                    print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Warning: Checkpoint from control panel not found: {new_checkpoint}")
-
-                    except Exception as e:
-                        print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Warning: Error reading state file: {e}")
-
-                # Get the latest modification time of current checkpoint
-                last_modified = os.path.getmtime(cfg.checkpoint) if os.path.exists(cfg.checkpoint) else 0
-
-                if iteration_count == 1:
-                    # First load
-                    file_size = os.path.getsize(cfg.checkpoint) / (1024 * 1024)  # MB
-                    mod_time = datetime.datetime.fromtimestamp(last_modified).strftime('%Y-%m-%d %H:%M:%S')
-                    print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Loading initial checkpoint...")
-                    print(f"  File: {cfg.checkpoint}")
-                    print(f"  Size: {file_size:.2f} MB")
-                    print(f"  Modified: {mod_time}")
-                    print(f"  Starting visualization...\n")
-
-                # Run inference
-                runner.run({
-                    'train': False,
-                    'play': True,
-                    'checkpoint': cfg.checkpoint,
-                    'sigma': cfg.sigma if cfg.sigma != '' else None
-                })
-
-                # Wait and check if checkpoint has been updated
-                print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Waiting {reload_interval}s for checkpoint updates...")
-                time.sleep(reload_interval)
-
-                # Check if checkpoint file has been modified (for auto mode with latest.pth)
-                if os.path.exists(cfg.checkpoint):
-                    current_modified = os.path.getmtime(cfg.checkpoint)
-                    if current_modified > last_modified:
-                        need_reload = True
-                        reload_reason = "Checkpoint file updated"
-
-                # Reload if needed
-                if need_reload:
-                    file_size = os.path.getsize(cfg.checkpoint) / (1024 * 1024)  # MB
-                    mod_time = datetime.datetime.fromtimestamp(os.path.getmtime(cfg.checkpoint)).strftime('%Y-%m-%d %H:%M:%S')
-                    print(f"\n{'#'*70}")
-                    print(f"{'NEW CHECKPOINT DETECTED!':^70}")
-                    print(f"{'#'*70}")
-                    print(f"  Time: [{datetime.datetime.now().strftime('%H:%M:%S')}]")
-                    print(f"  Reason: {reload_reason}")
-                    print(f"{'-'*70}")
-                    print(f"  Checkpoint Path:")
-                    print(f"  {cfg.checkpoint}")
-                    print(f"{'-'*70}")
-                    print(f"  Size: {file_size:.2f} MB")
-                    print(f"  Modified: {mod_time}")
-                    print(f"{'-'*70}")
-                    print(f"  Reloading model...")
-                    # Reset and reload
-                    runner.reset()
-                    runner.load(rlg_config_dict)
-                    print(f"  ✓ Model reloaded successfully!")
-                    print(f"{'#'*70}\n")
-                else:
-                    print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] No updates. Continuing with current model...")
-
-            except KeyboardInterrupt:
-                print(f"\n[{datetime.datetime.now().strftime('%H:%M:%S')}] Visualization stopped by user")
-                # Clean up control panel process if running
-                if control_panel_process is not None:
-                    try:
-                        control_panel_process.terminate()
-                        control_panel_process.wait(timeout=3)
-                        print(f"Control panel process terminated")
-                    except:
-                        control_panel_process.kill()
-                break
+                with open(state_file, 'r') as f:
+                    state = json.load(f)
+                new_checkpoint = state.get('checkpoint_path', None)
+                if new_checkpoint and new_checkpoint != cfg.checkpoint and os.path.exists(new_checkpoint):
+                    print(f"\n{'='*70}")
+                    print(f"Control panel selected different checkpoint:")
+                    print(f"  {new_checkpoint}")
+                    print(f"Updating checkpoint to load...")
+                    print(f"{'='*70}\n")
+                    cfg.checkpoint = new_checkpoint
             except Exception as e:
-                print(f"\n[{datetime.datetime.now().strftime('%H:%M:%S')}] Error in visualization loop: {e}")
-                print(f"Will retry in {reload_interval} seconds...")
-                time.sleep(reload_interval)
+                print(f"Warning: Error reading control panel state: {e}")
+
+        # Display checkpoint info
+        if os.path.exists(cfg.checkpoint):
+            file_size = os.path.getsize(cfg.checkpoint) / (1024 * 1024)  # MB
+            mod_time = datetime.datetime.fromtimestamp(os.path.getmtime(cfg.checkpoint)).strftime('%Y-%m-%d %H:%M:%S')
+            print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Loading checkpoint...")
+            print(f"  File: {cfg.checkpoint}")
+            print(f"  Size: {file_size:.2f} MB")
+            print(f"  Modified: {mod_time}")
+            print(f"  Starting visualization...\n")
+
+        try:
+            # Run inference (this will run until user presses ESC)
+            runner.run({
+                'train': False,
+                'play': True,
+                'checkpoint': cfg.checkpoint,
+                'sigma': cfg.sigma if cfg.sigma != '' else None
+            })
+        except KeyboardInterrupt:
+            pass
+        finally:
+            print(f"\n[{datetime.datetime.now().strftime('%H:%M:%S')}] Visualization stopped")
+            # Clean up control panel process if running
+            if control_panel_process is not None:
+                try:
+                    control_panel_process.terminate()
+                    control_panel_process.wait(timeout=3)
+                    print(f"Control panel process terminated")
+                except:
+                    control_panel_process.kill()
     else:
         # Normal training mode
         runner.run({
